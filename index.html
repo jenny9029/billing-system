@@ -925,11 +925,8 @@ function submitContract() {
   showLoading('寫入帳單中...');
   document.getElementById('submit-btn').disabled = true;
 
-  fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
+  var encodedData = encodeURIComponent(JSON.stringify(payload));
+  fetch(GAS_URL + '?action=submit&data=' + encodedData)
   .then(function(r) { return r.json(); })
   .then(function(res) {
     hideLoading();
