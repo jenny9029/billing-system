@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>合約書套印系統</title>
+<style>
+  /* ── 變數 ── */
+  :root {
+    --green-dark:  #1a3d2b;
+    --green-mid:   #2d6a4f;
+    --green-light: #52b788;
+    --green-pale:  #d8f3dc;
+    --gold:        #c9a84c;
+    --gold-light:  #f5e6c8;
+    --white:       #fafaf8;
+    --gray-100:    #f4f4f0;
+    --gray-300:    #d0cfc8;
+    --gray-500:    #8a8880;
+    --gray-700:    #4a4845;
+    --text:        #1c1c1a;
+    --shadow-sm:   0 1px 4px rgba(0,0,0,.08);
+    --shadow-md:   0 4px 16px rgba(0,0,0,.12);
+    --radius:      10px;
+    --transition:  .2s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--gray-100);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── 側邊欄 ── */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+    background: var(--green-dark);
+    display: flex; flex-direction: column;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  .sidebar-logo h1 {
+    color: var(--white); font-size: 15px; font-weight: 700; line-height: 1.4;
+    letter-spacing: .04em;
+  }
+  .sidebar-logo span {
+    display: block; color: var(--green-light); font-size: 11px;
+    margin-top: 3px; letter-spacing: .08em;
+  }
+  .sidebar-nav { flex: 1; padding: 16px 0; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px; color: rgba(255,255,255,.7);
+    font-size: 13.5px; cursor: pointer;
+    transition: var(--transition); border: none; background: none; width: 100%;
+    text-align: left;
+  }
+  .nav-item:hover, .nav-item.active {
+    background: rgba(255,255,255,.08); color: var(--white);
+  }
+  .nav-item.active { border-left: 3px solid var(--gold); padding-left: 17px; }
+  .nav-item svg { opacity: .7; flex-shrink: 0; }
+  .nav-item.active svg { opacity: 1; }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,.1);
+    color: rgba(255,255,255,.5); font-size: 12px;
+  }
+
+  /* ── 主內容 ── */
+  .main { margin-left: 220px; min-height: 100vh; }
+
+  /* ── 頂部列 ── */
+  .topbar {
+    background: var(--white); border-bottom: 1px solid var(--gray-300);
+    padding: 0 32px; height: 58px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 16px; font-weight: 700; color: var(--green-dark); }
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 7px; font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: var(--transition);
+    border: none; font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--green-mid); color: white;
+  }
+  .btn-primary:hover { background: var(--green-dark); }
+  .btn-secondary {
+    background: var(--gray-100); color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+  }
+  .btn-secondary:hover { background: var(--gray-300); }
+  .btn-gold {
+    background: var(--gold); color: white;
+  }
+  .btn-gold:hover { background: #b8932d; }
+  .btn-danger { background: #e74c3c; color: white; }
+  .btn-danger:hover { background: #c0392b; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── 統計卡片 ── */
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; padding: 24px 32px 0;
+  }
+  .stat-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 18px 20px; box-shadow: var(--shadow-sm);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .stat-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .stat-icon.green { background: var(--green-pale); }
+  .stat-icon.gold  { background: var(--gold-light); }
+  .stat-icon.blue  { background: #e8f4fd; }
+  .stat-icon.purple{ background: #f0e8fd; }
+  .stat-value { font-size: 26px; font-weight: 800; color: var(--green-dark); line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--gray-500); margin-top: 3px; }
+
+  /* ── 頁面區塊 ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── 合約列表頁 ── */
+  .list-header {
+    padding: 24px 32px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .list-header h2 { font-size: 18px; font-weight: 700; }
+  .filter-bar {
+    padding: 0 32px 16px;
+    display: flex; gap: 10px;
+  }
+  .filter-select {
+    padding: 7px 12px; border-radius: 7px; border: 1px solid var(--gray-300);
+    background: var(--white); font-size: 13px; color: var(--text);
+    font-family: inherit; cursor: pointer;
+  }
+  .contract-table-wrap {
+    padding: 0 32px 32px; overflow-x: auto;
+  }
+  .contract-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--white); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow-sm);
+  }
+  .contract-table thead tr {
+    background: var(--green-dark); color: var(--white);
+  }
+  .contract-table th {
+    padding: 12px 14px; font-size: 12.5px; font-weight: 600;
+    text-align: left; white-space: nowrap;
+  }
+  .contract-table td {
+    padding: 11px 14px; font-size: 13px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .contract-table tr:last-child td { border-bottom: none; }
+  .contract-table tr:hover td { background: var(--green-pale); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge-my { background: #fff3e0; color: #e65100; }
+  .badge-sg { background: #e8eaf6; color: #283593; }
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--gray-500);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ── 新增合約頁 ── */
+  .form-page { padding: 24px 32px 48px; }
+  .form-page-header {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 24px;
+  }
+  .back-btn {
+    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    color: var(--gray-500); font-size: 13px; font-family: inherit;
+    padding: 6px 10px; border-radius: 6px; transition: var(--transition);
+  }
+  .back-btn:hover { background: var(--gray-100); color: var(--text); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .form-full { grid-column: 1 / -1; }
+
+  .form-section {
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow-sm); overflow: hidden;
+  }
+  .section-header {
+    padding: 14px 20px; background: var(--green-dark);
+    color: var(--white); font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px; letter-spacing: .04em;
+  }
+  .section-body { padding: 20px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-row.thirds { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.single { grid-template-columns: 1fr; }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label {
+    font-size: 12px; font-weight: 600; color: var(--gray-500);
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .form-group label .required { color: #e74c3c; margin-left: 2px; }
+  .form-control {
+    padding: 9px 12px; border-radius: 7px; border: 1.5px solid var(--gray-300);
+    font-size: 14px; color: var(--text); font-family: inherit;
+    transition: var(--transition); background: var(--white);
+  }
+  .form-control:focus {
+    outline: none; border-color: var(--green-mid);
+    box-shadow: 0 0 0 3px rgba(45,106,79,.15);
+  }
+  select.form-control { cursor: pointer; }
+
+  /* 人數輸入 */
+  .count-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+  }
+  .count-item { display: flex; flex-direction: column; gap: 4px; }
+  .count-label { font-size: 11px; color: var(--gray-500); font-weight: 600; text-align: center; }
+  .count-input {
+    text-align: center; padding: 8px 4px;
+    border-radius: 7px; border: 1.5px solid var(--gray-300);
+    font-size: 16px; font-weight: 700; color: var(--green-dark);
+    font-family: inherit; transition: var(--transition);
+  }
+  .count-input:focus {
+    outline: none; border-color: var(--green-mid);
+    box-shadow: 0 0 0 3px rgba(45,106,79,.15);
+  }
+
+  /* 其他費用 */
+  .fee-list { display: flex; flex-direction: column; gap: 8px; }
+  .fee-item {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 8px; align-items: center;
+    padding: 10px; background: var(--gray-100); border-radius: 8px;
+    border: 1px solid var(--gray-300);
+  }
+  .fee-item .fee-label {
+    font-size: 12px; color: var(--gray-500); font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .fee-del-btn {
+    background: #fee2e2; border: none; cursor: pointer;
+    color: #e74c3c; border-radius: 6px; padding: 7px;
+    transition: var(--transition); display: flex; align-items: center;
+  }
+  .fee-del-btn:hover { background: #e74c3c; color: white; }
+  .add-fee-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 14px; border-radius: 7px;
+    border: 1.5px dashed var(--green-light);
+    background: none; color: var(--green-mid);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: var(--transition); font-family: inherit;
+    margin-top: 6px;
+  }
+  .add-fee-btn:hover { background: var(--green-pale); }
+
+  .fee-headers {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 8px; padding: 0 10px;
+    font-size: 11px; color: var(--gray-500); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+
+  /* 總計顯示 */
+  .total-preview {
+    background: var(--green-dark); color: white;
+    border-radius: var(--radius); padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 20px;
+  }
+  .total-preview .label { font-size: 13px; opacity: .7; }
+  .total-preview .amount { font-size: 24px; font-weight: 800; color: var(--gold); }
+
+  /* 表單底部 */
+  .form-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding-top: 20px; border-top: 1px solid var(--gray-100); margin-top: 24px;
+  }
+
+  /* ── Toast 通知 ── */
+  .toast-wrap {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 12px 18px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 600;
+    box-shadow: var(--shadow-md); animation: slideUp .3s ease;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.success { background: var(--green-mid); color: white; }
+  .toast.error   { background: #e74c3c; color: white; }
+  .toast.info    { background: var(--gold); color: white; }
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── 載入中 ── */
+  .loading-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; display: none;
+  }
+  .loading-box {
+    background: white; border-radius: 14px; padding: 32px 40px;
+    text-align: center; box-shadow: var(--shadow-md);
+  }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid var(--gray-300);
+    border-top-color: var(--green-mid); border-radius: 50%;
+    animation: spin .8s linear infinite; margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: var(--gray-700); font-weight: 600; }
+
+  /* ── 連結設定 ── */
+  .settings-notice {
+    background: var(--gold-light); border: 1.5px solid var(--gold);
+    border-radius: var(--radius); padding: 14px 18px;
+    font-size: 13px; color: var(--gray-700); margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .settings-notice .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .url-input-wrap { display: flex; gap: 8px; margin-top: 10px; }
+
+  .link-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--green-mid); font-weight: 600; font-size: 12px;
+    text-decoration: none; cursor: pointer;
+    background: none; border: none; font-family: inherit;
+    padding: 2px 4px; border-radius: 4px;
+  }
+  .link-btn:hover { background: var(--green-pale); }
+</style>
+</head>
+<body>
+
+<!-- ══ 側邊欄 ══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>📋 合約書<br>套印系統</h1>
+    <span>馬段 · 東南旅遊</span>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" onclick="showPage('list')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      合約列表
+    </button>
+    <button class="nav-item" onclick="showPage('form')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+      新增合約
+    </button>
+    <button class="nav-item" onclick="showPage('settings')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+      串接設定
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    👤 Harry · 馬來西亞段
+  </div>
+</aside>
+
+<!-- ══ 主內容 ══ -->
+<main class="main">
+  <!-- 頂部列 -->
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-title">合約列表</span>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary" onclick="loadContracts()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg>
+        重新整理
+      </button>
+      <button class="btn btn-primary" onclick="showPage('form')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        新增合約
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 合約列表頁 ── -->
+  <div class="page active" id="page-list">
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-icon green">📄</div>
+        <div><div class="stat-value" id="stat-total">0</div><div class="stat-label">合約書總數</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon gold">🇲🇾</div>
+        <div><div class="stat-value" id="stat-my">0</div><div class="stat-label">馬來西亞</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">🇸🇬</div>
+        <div><div class="stat-value" id="stat-sg">0</div><div class="stat-label">新加坡</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple">📅</div>
+        <div><div class="stat-value" id="stat-month">0</div><div class="stat-label">本月新增</div></div>
+      </div>
+    </div>
+
+    <div class="list-header">
+      <h2>合約列表</h2>
+      <button class="btn btn-primary" onclick="showPage('form')">＋ 新增合約書</button>
+    </div>
+
+    <div class="filter-bar">
+      <select class="filter-select" id="filter-dest" onchange="filterContracts()">
+        <option value="">🔍 全部目的地</option>
+        <option value="馬來西亞">🇲🇾 馬來西亞</option>
+        <option value="新加坡">🇸🇬 新加坡</option>
+      </select>
+      <select class="filter-select" id="filter-month" onchange="filterContracts()">
+        <option value="">全部月份</option>
+      </select>
+    </div>
+
+    <div class="contract-table-wrap">
+      <table class="contract-table">
+        <thead>
+          <tr>
+            <th>輸入時間</th>
+            <th>合約日期</th>
+            <th>團號</th>
+            <th>團名</th>
+            <th>領隊</th>
+            <th>大人</th>
+            <th>小佔</th>
+            <th>大人團費</th>
+            <th>目的地</th>
+            <th>帳單連結</th>
+          </tr>
+        </thead>
+        <tbody id="contract-tbody">
+          <tr><td colspan="10" class="empty-state">
+            <div class="empty-icon">📋</div>
+            <p>載入中...</p>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 新增合約頁 ── -->
+  <div class="page" id="page-form">
+    <div class="form-page">
+      <div class="form-page-header">
+        <button class="back-btn" onclick="showPage('list')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M5 12l7 7M5 12l7-7"/></svg>
+          返回列表
+        </button>
+        <h2 style="font-size:18px;font-weight:700;">新增合約書</h2>
+      </div>
+
+      <div class="form-grid">
+        <!-- 基本資訊 -->
+        <div class="form-section">
+          <div class="section-header">📌 基本資訊</div>
+          <div class="section-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>合約日期 <span class="required">*</span></label>
+                <input type="date" class="form-control" id="f-date" required>
+              </div>
+              <div class="form-group">
+                <label>目的地 <span class="required">*</span></label>
+                <select class="form-control" id="f-dest">
+                  <option value="馬來西亞">🇲🇾 馬來西亞</option>
+                  <option value="新加坡">🇸🇬 新加坡</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>旅行社 <span class="required">*</span></label>
+                <select class="form-control" id="f-agency">
+                  <option>東南旅遊</option>
+                  <option>雄獅旅遊</option>
+                  <option>可樂旅遊</option>
+                  <option>天海旅遊</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Agent 團號</label>
+                <input type="text" class="form-control" id="f-agent-code" placeholder="旅行社自有團號">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Local 團號 <span class="required">*</span></label>
+                <input type="text" class="form-control" id="f-tour-code" placeholder="如 26KT0302A" oninput="this.value=this.value.toUpperCase()">
+              </div>
+              <div class="form-group">
+                <label>團名 <span class="required">*</span></label>
+                <input type="text" class="form-control" id="f-tour-name" placeholder="如 0302 KK6">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 人員資訊 -->
+        <div class="form-section">
+          <div class="section-header">👤 人員資訊</div>
+          <div class="section-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label>領隊姓名 <span class="required">*</span></label>
+                <select class="form-control" id="f-leader" onchange="syncPhone('leader')">
+                  <option value="">— 請選擇 —</option>
+                  <option value="薛美美">薛美美</option>
+                  <option value="林彥清">林彥清</option>
+                  <option value="陳建志">陳建志</option>
+                  <option value="葉哲綸">葉哲綸</option>
+                  <option value="吳俊緯">吳俊緯</option>
+                  <option value="蔡師達">蔡師達</option>
+                  <option value="李筠琪">李筠琪</option>
+                  <option value="鄭淑萍">鄭淑萍</option>
+                  <option value="__manual__">— 手動輸入 —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>領隊電話</label>
+                <input type="text" class="form-control" id="f-leader-phone" placeholder="自動帶入或手動填寫">
+              </div>
+            </div>
+            <div id="leader-manual-wrap" style="display:none" class="form-row">
+              <div class="form-group form-full">
+                <label>領隊姓名（手動）</label>
+                <input type="text" class="form-control" id="f-leader-manual" placeholder="請輸入領隊姓名">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>導遊</label>
+                <select class="form-control" id="f-guide" onchange="syncPhone('guide')">
+                  <option value="">— 請選擇 —</option>
+                  <option value="KIMMY">KIMMY</option>
+                  <option value="Cindy">Cindy</option>
+                  <option value="__manual__">— 手動輸入 —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>導遊電話</label>
+                <input type="text" class="form-control" id="f-guide-phone" placeholder="自動帶入或手動填寫">
+              </div>
+            </div>
+            <div id="guide-manual-wrap" style="display:none" class="form-row">
+              <div class="form-group form-full">
+                <label>導遊姓名（手動）</label>
+                <input type="text" class="form-control" id="f-guide-manual" placeholder="請輸入導遊姓名">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 班機資訊 -->
+        <div class="form-section">
+          <div class="section-header">✈️ 班機資訊</div>
+          <div class="section-body">
+            <div class="form-row single">
+              <div class="form-group">
+                <label>🛫 去程班機</label>
+                <input type="text" class="form-control" id="f-flight-out" placeholder="如 4/16 TPE/KUL CI 721 0845/1325">
+              </div>
+            </div>
+            <div class="form-row single">
+              <div class="form-group">
+                <label>🛬 回程班機</label>
+                <input type="text" class="form-control" id="f-flight-in" placeholder="如 4/20 KUL/TPE CI 722 1445/1935">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 人數 & 房型 -->
+        <div class="form-section">
+          <div class="section-header">👥 人數 & 費用</div>
+          <div class="section-body">
+            <div style="margin-bottom:14px">
+              <div style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">人數</div>
+              <div class="count-grid">
+                <div class="count-item">
+                  <div class="count-label">大人</div>
+                  <input type="number" class="count-input" id="f-adult" value="0" min="0" oninput="calcTotal()">
+                </div>
+                <div class="count-item">
+                  <div class="count-label">小佔床</div>
+                  <input type="number" class="count-input" id="f-child-bed" value="0" min="0" oninput="calcTotal()">
+                </div>
+                <div class="count-item">
+                  <div class="count-label">小不佔</div>
+                  <input type="number" class="count-input" id="f-child-no-bed" value="0" min="0" oninput="calcTotal()">
+                </div>
+                <div class="count-item">
+                  <div class="count-label">小加床</div>
+                  <input type="number" class="count-input" id="f-child-extra" value="0" min="0" oninput="calcTotal()">
+                </div>
+                <div class="count-item">
+                  <div class="count-label">嬰兒</div>
+                  <input type="number" class="count-input" id="f-baby" value="0" min="0">
+                </div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>大人團費單價 (NT$) <span class="required">*</span></label>
+                <input type="number" class="form-control" id="f-adult-price" placeholder="如 16600" oninput="calcTotal()">
+              </div>
+              <div class="form-group">
+                <label>FOC 人數</label>
+                <input type="number" class="form-control" id="f-foc" value="0" min="0" oninput="calcTotal()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 其他費用 -->
+        <div class="form-section form-full">
+          <div class="section-header">💰 其他費用項目</div>
+          <div class="section-body">
+            <div class="fee-headers">
+              <span>費用名稱</span>
+              <span>金額 (NT$)</span>
+              <span>人數/單位</span>
+              <span>FOC</span>
+              <span></span>
+            </div>
+            <div class="fee-list" id="fee-list"></div>
+            <button class="add-fee-btn" onclick="addFeeItem()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+              新增費用項目（最多 8 項）
+            </button>
+
+            <div class="total-preview" id="total-preview">
+              <span class="label">📊 預估團費總計</span>
+              <span class="amount" id="total-amount">NT$0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 送出 -->
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="showPage('list')">取消</button>
+        <button class="btn btn-gold" onclick="submitContract()" id="submit-btn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v14a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          儲存並寫入帳單
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 設定頁 ── -->
+  <div class="page" id="page-settings">
+    <div class="form-page">
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:20px;">⚙️ 串接設定</h2>
+
+      <div class="form-section" style="max-width:640px">
+        <div class="section-header">🔗 Google Apps Script 連結</div>
+        <div class="section-body">
+          <div class="settings-notice">
+            <span class="icon">ℹ️</span>
+            <div>
+              <strong>設定說明：</strong>部署 Google Apps Script 後，將取得的 Web App 網址貼入下方，系統才能自動寫入 Google Sheets 帳單。
+              <br><br>
+              部署步驟請參考附件「DEPLOY.md」說明文件。
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:16px">
+            <label>Apps Script Web App 網址</label>
+            <div class="url-input-wrap">
+              <input type="url" class="form-control" id="gas-url-input"
+                placeholder="https://script.google.com/macros/s/.../exec"
+                value="">
+              <button class="btn btn-primary" onclick="saveGasUrl()">儲存</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>連線狀態</label>
+            <div id="connection-status" style="padding:10px;border-radius:7px;background:var(--gray-100);font-size:13px;color:var(--gray-500);">
+              尚未設定連線網址
+            </div>
+          </div>
+
+          <div style="margin-top:16px">
+            <button class="btn btn-secondary" onclick="testConnection()">🔌 測試連線</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- 載入中 -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">寫入帳單中...</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// 設定
+// ══════════════════════════════════════════════════════════
+var GAS_URL = localStorage.getItem("gas_url") || "";
+
+// 領隊電話資料
+var LEADER_PHONES = {
+  "薛美美": "0912-345-001",
+  "林彥清": "0912-345-002",
+  "陳建志": "0912-345-003",
+  "葉哲綸": "0912-345-004",
+  "吳俊緯": "0912-345-005",
+  "蔡師達": "0912-345-006",
+  "李筠琪": "0912-345-007",
+  "鄭淑萍": "0912-345-008"
+};
+
+var GUIDE_PHONES = {
+  "KIMMY": "0988-001-001",
+  "Cindy": "0988-001-002"
+};
+
+// 全部合約資料
+var allContracts = [];
+var feeCount = 0;
+
+// ══════════════════════════════════════════════════════════
+// 頁面切換
+// ══════════════════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+
+  var titles = { list: '合約列表', form: '新增合約書', settings: '串接設定' };
+  document.getElementById('topbar-title').textContent = titles[name] || '';
+
+  var navIndex = { list: 0, form: 1, settings: 2 };
+  var navItems = document.querySelectorAll('.nav-item');
+  if (navItems[navIndex[name]]) navItems[navIndex[name]].classList.add('active');
+
+  if (name === 'form') {
+    // 設定今天日期
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth()+1).padStart(2,'0');
+    var dd = String(today.getDate()).padStart(2,'0');
+    document.getElementById('f-date').value = yyyy + '-' + mm + '-' + dd;
+    feeCount = 0;
+    document.getElementById('fee-list').innerHTML = '';
+    // 預設加一個費用項目
+    addFeeItem('單人房差', '', '', '');
+    addFeeItem('每人每天水費(含TL)', '50', '', '');
+    calcTotal();
+  }
+
+  if (name === 'settings') {
+    var input = document.getElementById('gas-url-input');
+    if (input) input.value = GAS_URL;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 領隊/導遊 電話自動帶入
+// ══════════════════════════════════════════════════════════
+function syncPhone(type) {
+  var select = document.getElementById('f-' + type);
+  var phoneInput = document.getElementById('f-' + type + '-phone');
+  var manualWrap = document.getElementById(type + '-manual-wrap');
+
+  if (select.value === '__manual__') {
+    manualWrap.style.display = '';
+    phoneInput.value = '';
+    phoneInput.removeAttribute('readonly');
+  } else {
+    manualWrap.style.display = 'none';
+    var phones = type === 'leader' ? LEADER_PHONES : GUIDE_PHONES;
+    phoneInput.value = phones[select.value] || '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 費用項目
+// ══════════════════════════════════════════════════════════
+function addFeeItem(name, amount, unit, foc) {
+  if (feeCount >= 8) { showToast('最多只能新增 8 個費用項目', 'error'); return; }
+  feeCount++;
+  var id = 'fee-' + Date.now();
+  var div = document.createElement('div');
+  div.className = 'fee-item';
+  div.id = id;
+  div.innerHTML =
+    '<input type="text" class="form-control" placeholder="費用名稱" value="' + (name||'') + '" oninput="calcTotal()">' +
+    '<input type="number" class="form-control" placeholder="金額" value="' + (amount||'') + '" oninput="calcTotal()">' +
+    '<input type="number" class="form-control" placeholder="人數" value="' + (unit||'') + '" oninput="calcTotal()">' +
+    '<input type="number" class="form-control" placeholder="FOC" value="' + (foc||'0') + '" oninput="calcTotal()">' +
+    '<button class="fee-del-btn" onclick="removeFeeItem(\'' + id + '\')" title="刪除">' +
+    '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+  document.getElementById('fee-list').appendChild(div);
+  calcTotal();
+}
+
+function removeFeeItem(id) {
+  var el = document.getElementById(id);
+  if (el) { el.remove(); feeCount--; calcTotal(); }
+}
+
+// ══════════════════════════════════════════════════════════
+// 計算預估總額
+// ══════════════════════════════════════════════════════════
+function calcTotal() {
+  var adultPrice = Number(document.getElementById('f-adult-price').value) || 0;
+  var adultCount = Number(document.getElementById('f-adult').value) || 0;
+  var childBed   = Number(document.getElementById('f-child-bed').value) || 0;
+  var childNo    = Number(document.getElementById('f-child-no-bed').value) || 0;
+  var childExtra = Number(document.getElementById('f-child-extra').value) || 0;
+  var foc        = Number(document.getElementById('f-foc').value) || 0;
+
+  var base = adultPrice * (adultCount - foc)
+           + adultPrice * childBed
+           + (adultPrice / 2) * childNo
+           + adultPrice * childExtra;
+
+  var others = 0;
+  document.querySelectorAll('#fee-list .fee-item').forEach(function(item) {
+    var inputs = item.querySelectorAll('input');
+    var amt  = Number(inputs[1].value) || 0;
+    var unit = Number(inputs[2].value) || 0;
+    var fc   = Number(inputs[3].value) || 0;
+    others += amt * (unit - fc);
+  });
+
+  var total = base + others;
+  document.getElementById('total-amount').textContent = 'NT$' + total.toLocaleString();
+}
+
+// ══════════════════════════════════════════════════════════
+// 送出表單
+// ══════════════════════════════════════════════════════════
+function submitContract() {
+  if (!GAS_URL) {
+    showToast('請先在「串接設定」填入 Apps Script 網址', 'error');
+    showPage('settings'); return;
+  }
+
+  var tourCode = document.getElementById('f-tour-code').value.trim();
+  var tourName = document.getElementById('f-tour-name').value.trim();
+  var date     = document.getElementById('f-date').value;
+  var leader   = document.getElementById('f-leader').value;
+
+  if (leader === '__manual__') leader = document.getElementById('f-leader-manual').value.trim();
+  if (!tourCode || !tourName || !date || !leader) {
+    showToast('請填寫必填欄位（團號、團名、日期、領隊）', 'error'); return;
+  }
+
+  var guide = document.getElementById('f-guide').value;
+  if (guide === '__manual__') guide = document.getElementById('f-guide-manual').value.trim();
+
+  // 收集其他費用
+  var otherFees = [];
+  document.querySelectorAll('#fee-list .fee-item').forEach(function(item) {
+    var inputs = item.querySelectorAll('input');
+    otherFees.push({
+      name:   inputs[0].value.trim(),
+      amount: inputs[1].value,
+      unit:   inputs[2].value,
+      foc:    inputs[3].value
+    });
+  });
+
+  var payload = {
+    contractDate:  date,
+    destination:   document.getElementById('f-dest').value,
+    agency:        document.getElementById('f-agency').value,
+    agentTourCode: document.getElementById('f-agent-code').value.trim(),
+    tourCode:      tourCode,
+    tourName:      tourName,
+    leaderName:    leader,
+    guideName:     guide,
+    flightOut:     document.getElementById('f-flight-out').value.trim(),
+    flightIn:      document.getElementById('f-flight-in').value.trim(),
+    adultCount:    document.getElementById('f-adult').value,
+    childWithBed:  document.getElementById('f-child-bed').value,
+    childNoBed:    document.getElementById('f-child-no-bed').value,
+    childExtraBed: document.getElementById('f-child-extra').value,
+    babyCount:     document.getElementById('f-baby').value,
+    adultPrice:    document.getElementById('f-adult-price').value,
+    focCount:      document.getElementById('f-foc').value,
+    otherFees:     otherFees
+  };
+
+  showLoading('寫入帳單中...');
+  document.getElementById('submit-btn').disabled = true;
+
+  fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    hideLoading();
+    document.getElementById('submit-btn').disabled = false;
+    if (res.success) {
+      showToast('✅ ' + res.message, 'success');
+      setTimeout(function() {
+        showPage('list');
+        loadContracts();
+      }, 1500);
+    } else {
+      showToast('❌ 寫入失敗：' + res.error, 'error');
+    }
+  })
+  .catch(function(err) {
+    hideLoading();
+    document.getElementById('submit-btn').disabled = false;
+    showToast('❌ 網路錯誤，請確認 Apps Script 網址是否正確', 'error');
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// 載入合約列表
+// ══════════════════════════════════════════════════════════
+function loadContracts() {
+  if (!GAS_URL) {
+    document.getElementById('contract-tbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">' +
+      '⚠️ 請先在「串接設定」填入 Apps Script 網址才能載入歷史紀錄</td></tr>';
+    return;
+  }
+
+  document.getElementById('contract-tbody').innerHTML =
+    '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">⏳ 載入中...</td></tr>';
+
+  fetch(GAS_URL + '?action=list')
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.success) {
+      allContracts = res.contracts || [];
+      updateStats();
+      updateMonthFilter();
+      renderContracts(allContracts);
+    }
+  })
+  .catch(function() {
+    document.getElementById('contract-tbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">❌ 無法連線，請檢查設定</td></tr>';
+  });
+}
+
+function updateStats() {
+  var now = new Date();
+  var thisMonth = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0');
+  var my = 0, sg = 0, month = 0;
+  allContracts.forEach(function(c) {
+    if (c.destination === '馬來西亞') my++;
+    else if (c.destination === '新加坡') sg++;
+    if (c.contractDate && c.contractDate.startsWith(thisMonth)) month++;
+  });
+  document.getElementById('stat-total').textContent = allContracts.length;
+  document.getElementById('stat-my').textContent = my;
+  document.getElementById('stat-sg').textContent = sg;
+  document.getElementById('stat-month').textContent = month;
+}
+
+function updateMonthFilter() {
+  var months = {};
+  allContracts.forEach(function(c) {
+    if (c.contractDate) {
+      var m = c.contractDate.substring(0, 7);
+      months[m] = true;
+    }
+  });
+  var sel = document.getElementById('filter-month');
+  sel.innerHTML = '<option value="">全部月份</option>';
+  Object.keys(months).sort().reverse().forEach(function(m) {
+    sel.innerHTML += '<option value="' + m + '">' + m + '</option>';
+  });
+}
+
+function filterContracts() {
+  var dest  = document.getElementById('filter-dest').value;
+  var month = document.getElementById('filter-month').value;
+  var filtered = allContracts.filter(function(c) {
+    var ok = true;
+    if (dest  && c.destination !== dest) ok = false;
+    if (month && (!c.contractDate || !c.contractDate.startsWith(month))) ok = false;
+    return ok;
+  });
+  renderContracts(filtered);
+}
+
+function renderContracts(list) {
+  var tbody = document.getElementById('contract-tbody');
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📋</div><p>目前沒有合約紀錄</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(function(c) {
+    var badge = c.destination === '馬來西亞'
+      ? '<span class="badge badge-my">🇲🇾 馬來西亞</span>'
+      : '<span class="badge badge-sg">🇸🇬 新加坡</span>';
+    var link = c.fileUrl
+      ? '<a href="' + c.fileUrl + '" target="_blank" class="link-btn">📊 開啟帳單</a>'
+      : '-';
+    return '<tr>' +
+      '<td style="font-size:12px;color:var(--gray-500)">' + (c.inputTime||'-') + '</td>' +
+      '<td>' + (c.contractDate||'-') + '</td>' +
+      '<td><strong>' + (c.tourCode||'-') + '</strong></td>' +
+      '<td>' + (c.tourName||'-') + '</td>' +
+      '<td>' + (c.leaderName||'-') + '</td>' +
+      '<td>' + (c.adultCount||0) + '</td>' +
+      '<td>' + (c.childWithBed||0) + '</td>' +
+      '<td>NT$' + Number(c.adultPrice||0).toLocaleString() + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td>' + link + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// 設定頁
+// ══════════════════════════════════════════════════════════
+function saveGasUrl() {
+  var url = document.getElementById('gas-url-input').value.trim();
+  if (!url) { showToast('請輸入網址', 'error'); return; }
+  GAS_URL = url;
+  localStorage.setItem('gas_url', url);
+  showToast('✅ 網址已儲存', 'success');
+  updateConnectionStatus('已儲存，點「測試連線」確認是否正常');
+}
+
+function testConnection() {
+  if (!GAS_URL) { showToast('請先輸入並儲存網址', 'error'); return; }
+  updateConnectionStatus('🔄 測試中...');
+  fetch(GAS_URL + '?action=list')
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.success !== undefined) {
+      updateConnectionStatus('✅ 連線成功！共找到 ' + (res.contracts||[]).length + ' 筆紀錄', 'success');
+    } else {
+      updateConnectionStatus('❌ 連線異常，請重新部署 GAS', 'error');
+    }
+  })
+  .catch(function() {
+    updateConnectionStatus('❌ 無法連線，請確認網址是否正確', 'error');
+  });
+}
+
+function updateConnectionStatus(msg, type) {
+  var el = document.getElementById('connection-status');
+  el.textContent = msg;
+  el.style.background = type === 'success' ? 'var(--green-pale)' :
+                        type === 'error'   ? '#fee2e2' : 'var(--gray-100)';
+  el.style.color = type === 'success' ? 'var(--green-dark)' :
+                   type === 'error'   ? '#c0392b' : 'var(--gray-500)';
+}
+
+// ══════════════════════════════════════════════════════════
+// UI 工具
+// ══════════════════════════════════════════════════════════
+function showLoading(text) {
+  document.getElementById('loading-text').textContent = text || '處理中...';
+  document.getElementById('loading').style.display = 'flex';
+}
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+
+function showToast(msg, type) {
+  var wrap = document.getElementById('toast-wrap');
+  var div = document.createElement('div');
+  div.className = 'toast ' + (type || 'info');
+  div.textContent = msg;
+  wrap.appendChild(div);
+  setTimeout(function() { if (div.parentNode) div.parentNode.removeChild(div); }, 4000);
+}
+
+// ══════════════════════════════════════════════════════════
+// 初始化
+// ══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  if (GAS_URL) loadContracts();
+  else {
+    document.getElementById('contract-tbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">' +
+      '⚠️ 請先到「串接設定」填入 Apps Script 網址</td></tr>';
+  }
+});
+</script>
+</body>
+</html>
