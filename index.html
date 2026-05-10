@@ -925,27 +925,54 @@ function submitContract() {
   showLoading('寫入帳單中...');
   document.getElementById('submit-btn').disabled = true;
 
+  // 用 iframe + form 方式送出，完全避免 CORS 問題
   var encodedData = encodeURIComponent(JSON.stringify(payload));
-  fetch(GAS_URL + '?action=submit&data=' + encodedData)
-  .then(function(r) { return r.json(); })
-  .then(function(res) {
+  var iframeId = 'submit-iframe-' + Date.now();
+  var iframe = document.createElement('iframe');
+  iframe.name = iframeId;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  var form = document.createElement('form');
+  form.method = 'GET';
+  form.action = GAS_URL;
+  form.target = iframeId;
+
+  var inputAction = document.createElement('input');
+  inputAction.type = 'hidden';
+  inputAction.name = 'action';
+  inputAction.value = 'submit';
+  form.appendChild(inputAction);
+
+  var inputData = document.createElement('input');
+  inputData.type = 'hidden';
+  inputData.name = 'data';
+  inputData.value = JSON.stringify(payload);
+  form.appendChild(inputData);
+
+  document.body.appendChild(form);
+
+  // 監聽 iframe 載入完成
+  var timeout = setTimeout(function() {
     hideLoading();
     document.getElementById('submit-btn').disabled = false;
-    if (res.success) {
-      showToast('✅ ' + res.message, 'success');
-      setTimeout(function() {
-        showPage('list');
-        loadContracts();
-      }, 1500);
-    } else {
-      showToast('❌ 寫入失敗：' + res.error, 'error');
-    }
-  })
-  .catch(function(err) {
+    // 假設成功（因為 iframe 跨域無法讀取回應）
+    showToast('✅ 已送出！請到 Google Drive 確認帳單是否產生', 'success');
+    setTimeout(function() { showPage('list'); loadContracts(); }, 2000);
+    document.body.removeChild(form);
+    document.body.removeChild(iframe);
+  }, 4000);
+
+  iframe.onload = function() {
+    clearTimeout(timeout);
     hideLoading();
     document.getElementById('submit-btn').disabled = false;
-    showToast('❌ 網路錯誤，請確認 Apps Script 網址是否正確', 'error');
-  });
+    showToast('✅ 已送出！請到 Google Drive 確認帳單是否產生', 'success');
+    setTimeout(function() { showPage('list'); loadContracts(); }, 2000);
+    try { document.body.removeChild(form); document.body.removeChild(iframe); } catch(e) {}
+  };
+
+  form.submit();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -962,19 +989,18 @@ function loadContracts() {
   document.getElementById('contract-tbody').innerHTML =
     '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">⏳ 載入中...</td></tr>';
 
-  fetch(GAS_URL + '?action=list')
-  .then(function(r) { return r.json(); })
-  .then(function(res) {
+  jsonpCall(GAS_URL + '?action=list', function(err, res) {
+    if (err || !res) {
+      document.getElementById('contract-tbody').innerHTML =
+        '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">❌ 無法連線，請檢查設定</td></tr>';
+      return;
+    }
     if (res.success) {
       allContracts = res.contracts || [];
       updateStats();
       updateMonthFilter();
       renderContracts(allContracts);
     }
-  })
-  .catch(function() {
-    document.getElementById('contract-tbody').innerHTML =
-      '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--gray-500)">❌ 無法連線，請檢查設定</td></tr>';
   });
 }
 
@@ -1063,17 +1089,16 @@ function saveGasUrl() {
 function testConnection() {
   if (!GAS_URL) { showToast('請先輸入並儲存網址', 'error'); return; }
   updateConnectionStatus('🔄 測試中...');
-  fetch(GAS_URL + '?action=list')
-  .then(function(r) { return r.json(); })
-  .then(function(res) {
+  jsonpCall(GAS_URL + '?action=list', function(err, res) {
+    if (err || !res) {
+      updateConnectionStatus('❌ 無法連線，請確認網址是否正確', 'error');
+      return;
+    }
     if (res.success !== undefined) {
       updateConnectionStatus('✅ 連線成功！共找到 ' + (res.contracts||[]).length + ' 筆紀錄', 'success');
     } else {
       updateConnectionStatus('❌ 連線異常，請重新部署 GAS', 'error');
     }
-  })
-  .catch(function() {
-    updateConnectionStatus('❌ 無法連線，請確認網址是否正確', 'error');
   });
 }
 
@@ -1109,6 +1134,28 @@ function showToast(msg, type) {
 // ══════════════════════════════════════════════════════════
 // 初始化
 // ══════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════
+// JSONP 工具（解決 CORS 問題）
+// ══════════════════════════════════════════════════════════
+var _jsonpCallbackCounter = 0;
+function jsonpCall(url, callback) {
+  var cbName = '_jsonpCb_' + (++_jsonpCallbackCounter) + '_' + Date.now();
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.head.removeChild(script);
+    callback(null, data);
+  };
+  var script = document.createElement('script');
+  script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+  script.onerror = function() {
+    delete window[cbName];
+    document.head.removeChild(script);
+    callback(new Error('JSONP failed'));
+  };
+  document.head.appendChild(script);
+}
+
 window.addEventListener('DOMContentLoaded', function() {
   if (GAS_URL) loadContracts();
   else {
